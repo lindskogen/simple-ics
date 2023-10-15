@@ -1,7 +1,7 @@
-import { crypto } from 'https://deno.land/std@0.154.0/crypto/mod.ts';
 import { parseDate, DateData, Zone } from './date.ts';
 import { ContentLine, stringifyLines } from './stringify.ts';
 import { parseRRule, RecurrenceRule } from './rrule.ts';
+import { hashString } from "./hash.ts";
 
 const calendarBegin: ContentLine = ['BEGIN', 'VCALENDAR'];
 
@@ -48,8 +48,11 @@ export class Event {
   }
 
   toLines(): ContentLine[] {
-    const uid = crypto.randomUUID();
+
     const { title, desc, rrule, alarm, location, url, organizer, geo, htmlContent } = this.config;
+
+    const stringRRule = parseRRule(rrule);
+    const uid = hashString([title, desc, stringRRule].join()).toString(16);
 
     const result = [
       eventBegin,
@@ -62,7 +65,7 @@ export class Event {
       ['LOCATION', location],
       ['URL', url],
       ['GEO', parseGeo(geo)],
-      ['RRULE', parseRRule(rrule)],
+      ['RRULE', stringRRule],
       ['ORGANIZER', parseOrganizer(organizer)],
       ...parseAlarm(alarm),
       eventEnd,
@@ -99,7 +102,7 @@ export interface EventConfig {
   organizer?: { name: string; email: string; dir?: string; };
   geo?: { lat: number; lon: number; };
   htmlContent?: string;
-  zone?: Zone // default to local 
+  zone?: Zone // default to local
 }
 
 export interface AlarmConfig {
